@@ -177,8 +177,7 @@ sub submit {
         'amount'         => 'grand_total',
         #                => 'merchant_email',
         #invoice_number  =>
-        #customer_id     =>
-        #                => 'merchant_trace_nbr',
+        customer_id      => 'merchant_trace_nbr',
         #                => 'original_amount',
         #                => 'original_trandate_mm',
         #                => 'original_trandate_dd',

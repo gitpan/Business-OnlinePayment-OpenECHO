@@ -14,9 +14,8 @@ use Business::OnlinePayment;
 my $tx = new Business::OnlinePayment("OpenECHO");
 $tx->content(
     type           => 'VISA',
-    #login          => '123>4684752',
-    login          => '1234684752',
-    password       => '54321420',
+    'login'        => '123>4685706',
+    'password'     => '09437869',
     action         => 'Normal Authorization',
     description    => 'Business::OnlinePayment visa test',
     amount         => '49.95',

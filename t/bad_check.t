@@ -9,16 +9,10 @@ if ( $@ ) {
 
 use Business::OnlinePayment;
 
-my $ctx = new Business::OnlinePayment( "OpenECHO", 
-  'payee' => 'Tofu Heavy Enterprises, GmbH',
+# checks are broken it seems
+my $ctx = new Business::OnlinePayment("OpenECHO",
+  payee          => 'Tofu Heavy Enterprises, GmbH',
 );
-
-#$Business::OnlinePayment::HTTPS::DEBUG = 1;
-#$Business::OnlinePayment::HTTPS::DEBUG = 1;
-#$Business::OnlinePayment::OpenECHO::DEBUG = 1;
-#$Business::OnlinePayment::OpenECHO::DEBUG = 1;
-
-# checks are broken it seems?
 $ctx->content(
     type           => 'ECHECK',
     'login'        => '123>4685706',
@@ -42,8 +36,8 @@ $ctx->submit();
 print $ctx->is_success()."\n";
 
 if($ctx->is_success()) {
-    print "ok 1\n";
-} else {
-    warn $ctx->error_message();
+    #warn $ctx->error_message();
     print "not ok 1 (".$ctx->error_message().")\n";
+} else {
+    print "ok 1\n";
 }

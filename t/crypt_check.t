@@ -1,24 +1,22 @@
-BEGIN { $| = 1; print "1..1\n"; }
+BEGIN {
+  $| = 1; print "1..1\n";
+  $Business::OnlinePayment::HTTPS::skip_NetSSLeay=1;
+  $Business::OnlinePayment::HTTPS::skip_NetSSLeay=1;
+}
 
 print "ok 1 # Skipped: testing account won't accept ACH transactions\n"; exit;
 
-eval "use Net::SSLeay;";
+eval "use Crypt::SSLeay;";
 if ( $@ ) {
-  print "ok 1 # Skipped: Net::SSLeay is not installed\n"; exit;
+  print "ok 1 # Skipped: Crypt::SSLeay is not installed\n"; exit;
 }
 
 use Business::OnlinePayment;
 
-my $ctx = new Business::OnlinePayment( "OpenECHO", 
-  'payee' => 'Tofu Heavy Enterprises, GmbH',
+# checks are broken it seems
+my $ctx = new Business::OnlinePayment("OpenECHO",
+  payee          => 'Tofu Heavy Enterprises, GmbH',
 );
-
-#$Business::OnlinePayment::HTTPS::DEBUG = 1;
-#$Business::OnlinePayment::HTTPS::DEBUG = 1;
-#$Business::OnlinePayment::OpenECHO::DEBUG = 1;
-#$Business::OnlinePayment::OpenECHO::DEBUG = 1;
-
-# checks are broken it seems?
 $ctx->content(
     type           => 'ECHECK',
     'login'        => '123>4685706',

@@ -13,6 +13,9 @@ t/bop.t
 t/capture.t
 t/bad_card.t
 t/crypt_bad_card.t
+t/bad_check.t
+t/crypt_bad_check.t
+t/crypt_check.t
 generror/ISPGuide-Codes.asp
 generror/errortable.html
 generror/errortable2hash.pl

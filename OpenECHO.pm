@@ -27,9 +27,11 @@
 # + v1.6.2      09/23/2003 Added DH transaction type (salim qadeer sqadeer@echo-inc.com)
 # --------
 # + v0.1        08/26/2004 Business::OnlinePayment implementation
+# + v0.2        09/13/2004
+# + v0.3        03/25/2006
 #
 # Copyright (C) 2002 Electric Pulp. <info@electricpulp.com>
-# Copyright (C) 2004 Ivan Kohler
+# Copyright (C) 2004-2006 Ivan Kohler
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -54,10 +56,11 @@ use strict;
 use Carp;
 use Business::OnlinePayment 3;
 use Business::OnlinePayment::HTTPS;
-use vars qw($VERSION @ISA);
+use vars qw($VERSION @ISA $DEBUG);
 
 @ISA = qw(Business::OnlinePayment::HTTPS);
-$VERSION = '0.01';
+$VERSION = '0.03';
+$DEBUG = 0;
 
 sub set_defaults {
 	my $self = shift;
@@ -94,6 +97,14 @@ sub map_fields {
 
     my %content = $self->content();
 
+    if ( lc($content{'action'}) eq 'void' ) {
+      $self->is_success(0);
+      $self->error_message( 'OpenECHO gateway does not support voids; '.
+                            'try action => "Credit" '
+                          );
+      return;
+    }
+
     my $avs = $self->require_avs;
     $avs = 1 unless defined($avs) && length($avs); #default AVS on unless explicitly turned off
 
@@ -116,7 +127,7 @@ sub map_fields {
                  #'void'                 => 'VOID',
                );
       }
-    } elsif ( $content{'type'} =~ /^check$/i ) {
+    } elsif ( $content{'type'} =~ /^e?check$/i ) {
       %map = ( 'normal authorization' => 'DD',
                'authorization only'   => 'DV',
                'credit'               => 'DC',
@@ -212,6 +223,8 @@ sub submit {
         license_num       => 'ec_id_number',
         license_state     => 'ec_id_state',
         #license_dob       =>
+        #get from new() args instead# payee             => 'ec_payee',
+        check_number      => 'ec_serial_number',
 
         #recurring_billing => 'cnp_recurring',
     );
@@ -223,13 +236,28 @@ sub submit {
     #default this way i guess...
     $self->{_content}{counter} = int(rand(2**31));
 
-    #ccexp_month & ccexp_year
-    $self->{_content}{'expiration'} =~ /^(\d+)\D+\d*(\d{2})$/
-      or croak "unparsable expiration ". $self->{_content}{expiration};
-    my( $month, $year ) = ( $1, $2 );
-    $month = '0'. $month if $month =~ /^\d$/;
-    $self->{_content}{ccexp_month} = $month;
-    $self->{_content}{ccexp_year} = $year;
+    if ( $self->transaction_type =~ /^[EA][VS]$/ ) {
+      #ccexp_month & ccexp_year
+      $self->{_content}{'expiration'} =~ /^(\d+)\D+\d*(\d{2})$/
+        or croak "unparsable expiration ". $self->{_content}{expiration};
+      my( $month, $year ) = ( $1, $2 );
+      $month = '0'. $month if $month =~ /^\d$/;
+      $self->{_content}{ccexp_month} = $month;
+      $self->{_content}{ccexp_year} = $year;
+    }
+
+    if ( $self->transaction_type =~ /^D[DVCH]$/ ) { #echeck
+
+      #check number kludge... "periodic bill payments" don't have check #s!
+      #$self->{_content}{ec_serial_number} = 'RECURRIN'
+      $self->{_content}{ec_serial_number} = '00000000'
+        if ! length($self->{_content}{ec_serial_number})
+        && $self->{_content}{ec_payment_type} =~ /^(PPD)?$/i;
+
+      ( $self->{_content}{ec_payee} = $self->payee )
+        or croak "'payee' option required when instantiating new ".
+                 "Business::OnlinePayment::OpenECHO object\n";
+    }
 
     $self->{_content}{cnp_recurring} = 'Y'
       if exists($self->{_content}{recurring_billing})
@@ -242,7 +270,9 @@ sub submit {
     $self->required_fields();
 
     my( $page, $response, %reply_headers) =
-      $self->https_get( $self->get_fields( $self->fields ) );
+      $self->https_post( $self->get_fields( $self->fields ) );
+
+    warn "raw echo response: $page" if $DEBUG;
 
     #XXX check $response and die if not 200?
 
@@ -638,8 +668,7 @@ Content required: type, login, password, action, amount, first_name, last_name, 
 
 =head2 Check
 
-Not yet implemented...
-#Content required: type, login, password, action, amount, first_name, last_name, account_number, routing_code, bank_name.
+Content required: type, login, password, action, amount, first_name, last_name, account_number, routing_code, bank_name. (...more)
 
 =head1 PREREQUISITES
 
